@@ -188,32 +188,66 @@ function gerarPDF() {
     return;
   }
 
-  // Cria uma janela limpa focada na impressão/geração do PDF
   const janelaImpressao = window.open('', '_blank');
   janelaImpressao.document.write(`
     <html>
       <head>
         <title>Receituário - ${paciente}</title>
         <style>
-          body { font-family: Arial, sans-serif; padding: 30px; color: #333; }
-          h2 { text-align: center; color: #2b7a78; }
-          .info { margin-bottom: 20px; }
-          .footer { margin-top: 50px; text-align: center; border-top: 1px solid #ccc; padding-top: 10px; }
+          @page {
+            size: A4;
+            margin: 20mm;
+          }
+          body { 
+            font-family: Arial, sans-serif; 
+            color: #333; 
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 95vh;
+          }
+          .conteudo {
+            flex: 1;
+          }
+          h2 { 
+            text-align: center; 
+            color: #2b7a78; 
+            margin-bottom: 30px;
+          }
+          .info { 
+            margin-bottom: 20px; 
+            font-size: 15px;
+            line-height: 1.6;
+          }
+          .footer { 
+            margin-top: auto; 
+            text-align: center; 
+            padding-top: 20px; 
+          }
+          .linha-assinatura {
+            width: 300px;
+            margin: 0 auto 10px auto;
+            border-top: 1px solid #333;
+          }
         </style>
       </head>
       <body>
-        <h2>📋 Receituário Médico / Comprovante de Atendimento</h2>
-        <div class="info">
-          <p><b>Paciente:</b> ${paciente}</p>
-          <p><b>Diagnóstico:</b> ${diagnostico || "Não especificado"}</p>
-          <p><b>Medicação Prescrita:</b> ${medicacao || "Nenhuma"}</p>
-          <p><b>Orientações / Observações:</b><br>${obs || "Nenhuma observação adicional."}</p>
+        <div class="conteudo">
+          <h2>📋 Receituário Médico / Comprovante de Atendimento</h2>
+          <div class="info">
+            <p><b>Paciente:</b> ${paciente}</p>
+            <p><b>Diagnóstico:</b> ${diagnostico || "Não especificado"}</p>
+            <p><b>Medicação Prescrita:</b> ${medicacao || "Nenhuma"}</p>
+            <p><b>Orientações / Observações:</b><br>${obs || "Nenhuma observação adicional."}</p>
+          </div>
         </div>
+        
         <div class="footer">
+          <div class="linha-assinatura"></div>
           <p>Assinatura do Médico / Carimbo</p>
-          <br><br>
-          <p>___________________________________________________</p>
         </div>
+
         <script>
           window.print();
         <\/script>
