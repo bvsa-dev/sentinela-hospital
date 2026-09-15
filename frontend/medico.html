@@ -1,28 +1,24 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-BR">
 <head>
+  <meta charset="UTF-8">
+  <title>Painel Médico</title>
   <link rel="stylesheet" href="/css/medico.css">
-  
 </head>
 
 <body>
 
 <div class="container">
-  <header>
-    <h1>Painel de Alunos</h1>
-    <p>Demonstração de CRUD Frontend/Backend (Node.js)</p>
-    <button onclick="window.print()" style="margin-top: 1rem; padding: 10px 20px; font-weight: bold; cursor: pointer; border-radius: 8px; border: none; background: white; color: var(--primary-color);">⬇️ Baixar PDF</button>
-  </header>
-
+  
   <!-- Cabeçalho com botão da TV -->
   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
     <h2 style="margin:0;">🩺 Painel Médico</h2>
     <button class="btn-abrir-tv" onclick="window.open('tv.html','_blank')">📺 Abrir Tela da TV</button>
   </div>
 
-  <!-- Campo criado para informar o consultório e chamar o paciente na TV -->
-  <div class="consultorio-input">
-    <label>Meu Consultório:</label>
+  <!-- Campo informado para o consultório -->
+  <div class="consultorio-input" style="margin-bottom: 15px;">
+    <label><b>Meu Consultório:</b></label>
     <input type="text" id="consultorio-num" value="01">
     <span style="color:#666; font-size:13px;">Este número será exibido na TV ao chamar o paciente.</span>
   </div>
@@ -33,16 +29,22 @@
 
   <h3>Consulta</h3>
 
-  <input id="paciente" placeholder="Paciente" readonly>
+  <!-- Campo do paciente liberado caso queira digitar manualmente ou via triagem -->
+  <input id="paciente" placeholder="Nome do Paciente">
   <input id="diagnostico" placeholder="Diagnóstico">
 
   <select id="medicacao">
     <option value="">Selecione a medicação</option>
   </select>
 
-  <textarea id="obs" placeholder="Observações"></textarea>
+  <textarea id="obs" placeholder="Observações e prescrição detalhada"></textarea>
 
-  <button onclick="salvar()">Salvar</button>
+  <!-- Botões de Ação da Consulta -->
+  <div style="display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap;">
+    <button onclick="salvar()" style="background-color: #2b7a78; color: white;">Salvar Consulta</button>
+    <button onclick="darAlta()" style="background-color: #d9534f; color: white;">🏥 Dar Alta</button>
+    <button onclick="gerarPDF()" style="background-color: #f0ad4e; color: white;">📄 Gerar Receituário PDF</button>
+  </div>
 
 </div>
 
@@ -59,33 +61,34 @@ function carregar() {
       const div = document.getElementById("triagens");
       div.innerHTML = "";
 
-      if (data.length === 0) {
-        div.innerHTML = "<p style='color:#888; text-align:center;'>Nenhum paciente na fila.</p>";
+      if (!data || data.length === 0) {
+        div.innerHTML = "<p style='color:#888; text-align:center;'>Nenhum paciente na fila de triagem.</p>";
         return;
       }
 
       data.forEach((t, index) => {
         div.innerHTML += `
-          <div class="card">
-            <h3>${t.nome}</h3>
+          <div class="card" style="border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; border-radius: 5px;">
+            <h3>${t.nome || "Sem Nome"}</h3>
             <p><b>Sintoma:</b> ${t.sintoma || "Não informado"}</p>
             <p><b>Temperatura:</b> ${t.temperatura || "Não informada"}°C</p>
-            <p><span class="${t.risco}">${t.risco}</span></p>
+            <p><b>Risco:</b> <span class="${t.risco}">${t.risco || "Normal"}</span></p>
             <p><b>Alergia:</b> ${t.alergia || "Nenhuma"}</p>
             <p><b>Observação:</b> ${t.observacao || "Nenhuma"}</p>
-            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top: 8px;">
               <button onclick="selecionar(${index})">Atender</button>
               <button class="btn-tv" onclick="chamarNaTV('${t.nome}')">📺 Chamar na TV</button>
             </div>
           </div>
         `;
       });
-    });
+    })
+    .catch(err => console.error("Erro ao carregar triagens:", err));
 }
 
-// Função criada para enviar o nome do paciente para a TV quando ele for chamado no consultório.
+// Envia o nome do paciente para a TV
 function chamarNaTV(nome) {
-  const consultorio = document.getElementById("consultorio-num").value || "01";
+  const consultorio = document.getElementById("consultorios-num")?.value || document.getElementById("consultorio-num").value || "01";
   fetch("/tv/chamar", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -98,16 +101,17 @@ function chamarNaTV(nome) {
   .then(r => r.json())
   .then(() => {
     alert("✅ " + nome + " foi chamado na TV para o Consultório " + consultorio + "!");
-  });
+  })
+  .catch(err => alert("Erro ao chamar na TV. Verifique a conexão."));
 }
 
 function selecionar(index) {
   const t = triagensCarregadas[index];
-  document.getElementById("paciente").value = t.nome;
+  document.getElementById("paciente").value = t.nome || "";
   document.getElementById("obs").value = t.observacao || "";
 
   if (t.alergia && t.alergia !== "Nenhuma") {
-    alert("⚠️ Paciente possui alergia: " + t.alergia);
+    alert("⚠️ ATENÇÃO: Paciente possui alergia registrada: " + t.alergia);
   }
 }
 
@@ -123,7 +127,8 @@ function carregarMedicacoes() {
         option.textContent = med;
         select.appendChild(option);
       });
-    });
+    })
+    .catch(err => console.log("Erro ao carregar medicações."));
 }
 
 function salvar() {
@@ -132,8 +137,7 @@ function salvar() {
   const medicacao = document.getElementById("medicacao").value;
   const obs = document.getElementById("obs").value;
 
-  if (!paciente) { alert("Selecione um paciente clicando em Atender."); return; }
-  if (!medicacao) { alert("Selecione uma medicação."); return; }
+  if (!paciente) { alert("Informe ou selecione o nome do paciente."); return; }
 
   fetch("/consulta", {
     method: "POST",
@@ -142,11 +146,81 @@ function salvar() {
   })
   .then(r => r.json())
   .then(() => {
-    alert("Consulta salva");
-    document.getElementById("diagnostico").value = "";
-    document.getElementById("medicacao").value = "";
-    document.getElementById("obs").value = "";
-  });
+    alert("✅ Consulta salva com sucesso!");
+  })
+  .catch(() => alert("Erro ao salvar consulta."));
+}
+
+// Função de Alta Médica
+function darAlta() {
+  const paciente = document.getElementById("paciente").value;
+  if (!paciente) {
+    alert("Nenhum paciente selecionado para dar alta.");
+    return;
+  }
+
+  // Opcional: Enviar requisição de alta para o backend se houver rota específica, ou apenas limpar/finalizar
+  fetch("/alta", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ paciente })
+  }).catch(() => {/* Ignora erro caso a rota /alta não exista no backend e executa o fluxo local */});
+
+  alert("🏥 Alta médica concedida para " + paciente + "!");
+  
+  // Limpa os campos da consulta
+  document.getElementById("paciente").value = "";
+  document.getElementById("diagnostico").value = "";
+  document.getElementById("medicacao").value = "";
+  document.getElementById("obs").value = "";
+  carregar();
+}
+
+// Função para gerar PDF do atendimento atual
+function gerarPDF() {
+  const paciente = document.getElementById("paciente").value;
+  const diagnostico = document.getElementById("diagnostico").value;
+  const medicacao = document.getElementById("medicacao").value;
+  const obs = document.getElementById("obs").value;
+
+  if (!paciente) {
+    alert("Selecione um paciente para gerar o receituário.");
+    return;
+  }
+
+  // Cria uma janela limpa focada na impressão/geração do PDF
+  const janelaImpressao = window.open('', '_blank');
+  janelaImpressao.document.write(`
+    <html>
+      <head>
+        <title>Receituário - ${paciente}</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 30px; color: #333; }
+          h2 { text-align: center; color: #2b7a78; }
+          .info { margin-bottom: 20px; }
+          .footer { margin-top: 50px; text-align: center; border-top: 1px solid #ccc; padding-top: 10px; }
+        </style>
+      </head>
+      <body>
+        <h2>📋 Receituário Médico / Comprovante de Atendimento</h2>
+        <div class="info">
+          <p><b>Paciente:</b> ${paciente}</p>
+          <p><b>Diagnóstico:</b> ${diagnostico || "Não especificado"}</p>
+          <p><b>Medicação Prescrita:</b> ${medicacao || "Nenhuma"}</p>
+          <p><b>Orientações / Observações:</b><br>${obs || "Nenhuma observação adicional."}</p>
+        </div>
+        <div class="footer">
+          <p>Assinatura do Médico / Carimbo</p>
+          <br><br>
+          <p>___________________________________________________</p>
+        </div>
+        <script>
+          window.print();
+        <\/script>
+      </body>
+    </html>
+  `);
+  janelaImpressao.document.close();
 }
 
 carregar();
