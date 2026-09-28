@@ -153,37 +153,42 @@ function salvar() {
   .catch(() => alert("Erro ao salvar consulta."));
 }
 
-// Função de Alta Médica
+// Função de Alta Médica integrada ao backend
 function darAlta() {
   const paciente = document.getElementById("paciente").value;
+  const motivoAlta = document.getElementById("motivoAlta")?.value || "Alta médica padrão";
+  
   if (!paciente) {
     alert("Nenhum paciente selecionado para dar alta.");
     return;
   }
 
-  // Opcional: Enviar requisição de alta para o backend se houver rota específica, ou apenas limpar/finalizar
   fetch("/alta", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ paciente })
-  }).catch(() => {/* Ignora erro caso a rota /alta não exista no backend e executa o fluxo local */});
-
-  alert("🏥 Alta médica concedida para " + paciente + "!");
-  
-  // Limpa os campos da consulta
-  document.getElementById("paciente").value = "";
-  document.getElementById("diagnostico").value = "";
-  document.getElementById("medicacao").value = "";
-  document.getElementById("obs").value = "";
-  carregar();
+    body: JSON.stringify({ paciente, motivoAlta })
+  })
+  .then(() => {
+    alert("🏥 Alta médica concedida para " + paciente + "!\nMotivo: " + motivoAlta);
+    
+    // Limpa os campos da consulta
+    document.getElementById("paciente").value = "";
+    document.getElementById("diagnostico").value = "";
+    document.getElementById("medicacao").value = "";
+    document.getElementById("obs").value = "";
+    if(document.getElementById("motivoAlta")) document.getElementById("motivoAlta").value = "";
+    carregar();
+  })
+  .catch(() => alert("Erro ao processar alta."));
 }
 
-// Função para gerar PDF do atendimento atual
+// Função para gerar PDF do atendimento atual incluindo o motivo da alta
 function gerarPDF() {
   const paciente = document.getElementById("paciente").value;
   const diagnostico = document.getElementById("diagnostico").value;
   const medicacao = document.getElementById("medicacao").value;
   const obs = document.getElementById("obs").value;
+  const motivoAlta = document.getElementById("motivoAlta")?.value || "Conclusão do atendimento médico";
 
   if (!paciente) {
     alert("Selecione um paciente para gerar o receituário.");
@@ -194,54 +199,26 @@ function gerarPDF() {
   janelaImpressao.document.write(`
     <html>
       <head>
-        <title>Receituário - ${paciente}</title>
+        <title>Receituário e Alta - ${paciente}</title>
         <style>
-          @page {
-            size: A4;
-            margin: 20mm;
-          }
-          body { 
-            font-family: Arial, sans-serif; 
-            color: #333; 
-            margin: 0;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-            min-height: 95vh;
-          }
-          .conteudo {
-            flex: 1;
-          }
-          h2 { 
-            text-align: center; 
-            color: #2b7a78; 
-            margin-bottom: 30px;
-          }
-          .info { 
-            margin-bottom: 20px; 
-            font-size: 15px;
-            line-height: 1.6;
-          }
-          .footer { 
-            margin-top: auto; 
-            text-align: center; 
-            padding-top: 20px; 
-          }
-          .linha-assinatura {
-            width: 300px;
-            margin: 0 auto 10px auto;
-            border-top: 1px solid #333;
-          }
+          @page { size: A4; margin: 20mm; }
+          body { font-family: Arial, sans-serif; color: #333; margin: 0; padding: 0; display: flex; flex-direction: column; min-height: 95vh; }
+          .conteudo { flex: 1; }
+          h2 { text-align: center; color: #2b7a78; margin-bottom: 30px; }
+          .info { margin-bottom: 20px; font-size: 15px; line-height: 1.6; }
+          .footer { margin-top: auto; text-align: center; padding-top: 20px; }
+          .linha-assinatura { width: 300px; margin: 0 auto 10px auto; border-top: 1px solid #333; }
         </style>
       </head>
       <body>
         <div class="conteudo">
-          <h2>📋 Receituário Médico / Comprovante de Atendimento</h2>
+          <h2>📋 Comprovante de Atendimento e Receituário</h2>
           <div class="info">
             <p><b>Paciente:</b> ${paciente}</p>
             <p><b>Diagnóstico:</b> ${diagnostico || "Não especificado"}</p>
             <p><b>Medicação Prescrita:</b> ${medicacao || "Nenhuma"}</p>
             <p><b>Orientações / Observações:</b><br>${obs || "Nenhuma observação adicional."}</p>
+            <p><b>Motivo da Alta:</b> ${motivoAlta}</p>
           </div>
         </div>
         
