@@ -59,14 +59,11 @@
 </div>
 
 <script>
-
 function carregarPacientes() {
   fetch("/pacientes")
     .then(r => r.json())
     .then(pacientes => {
       const div = document.getElementById("fila-pacientes");
-
-      // Mostra apenas os com status "triagem"
       const fila = pacientes.filter(p => p.status === "triagem");
 
       if (fila.length === 0) {
@@ -89,12 +86,10 @@ function carregarPacientes() {
       });
     })
     .catch(() => {
-      document.getElementById("fila-pacientes").innerHTML =
-        "<p style='color:red;'>Erro ao carregar pacientes.</p>";
+      document.getElementById("fila-pacientes").innerHTML = "<p style='color:red;'>Erro ao carregar pacientes.</p>";
     });
 }
 
-// Função criada para enviar o nome do paciente para a TV quando ele for chamado no guichê.
 function chamarNaTV(nome) {
   fetch("/tv/chamar", {
     method: "POST",
@@ -128,26 +123,29 @@ function salvar() {
   const observacao = document.getElementById("observacao").value;
   const risco = classificarRisco(sintoma, temperatura);
 
+  if (!nome) {
+    alert("Informe o nome do paciente.");
+    return;
+  }
+
+  // Corrigido para /triagem (conforme server.js)
   fetch("/triagem", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ nome, sintoma, temperatura, alergia, observacao, risco })
   })
   .then(r => r.json())
-  .then(data => {
+  .then(() => {
     const resultado = document.getElementById("resultado");
     resultado.className = risco;
     resultado.innerHTML = "Classificação: " + risco.toUpperCase();
-    alert("Triagem salva com sucesso!");
-  });
+    alert("Triagem salva com sucesso e enviada ao médico!");
+  })
+  .catch(() => alert("Erro ao salvar triagem."));
 }
 
-// Carrega a fila ao abrir a página
 carregarPacientes();
-
-// Atualiza a lista automaticamente a cada 10 segundos
 setInterval(carregarPacientes, 10000);
-
 </script>
 
 </body>
