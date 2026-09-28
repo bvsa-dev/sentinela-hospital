@@ -15,7 +15,11 @@ const DB_FILE = path.join(__dirname, "db.json");
 function readDB() {
   if (!fs.existsSync(DB_FILE)) {
     return {
-      usuarios: [],
+      usuarios: [
+        { usuario: "triagem", senha: "123", tipo: "triagem" },
+        { usuario: "medico", senha: "123", tipo: "medico" },
+        { usuario: "atendimento", senha: "123", tipo: "atendimento" }
+      ],
       pacientes: [],
       triagens: [],
       consultas: [],
@@ -36,7 +40,6 @@ function writeDB(data) {
 // LOGIN
 app.post("/login", (req, res) => {
   const db = readDB();
-
   const user = db.usuarios.find(u =>
     u.usuario === req.body.usuario &&
     u.senha === req.body.senha
@@ -58,7 +61,7 @@ app.post("/atendimento", (req, res) => {
     nome: req.body.nome,
     cpf: req.body.cpf,
     tipo: req.body.tipo,
-    status: "triagens",
+    status: "triagem", // Corrigido de "triagens" para "triagem"
     createdAt: new Date()
   };
 
@@ -68,14 +71,14 @@ app.post("/atendimento", (req, res) => {
   res.json(paciente);
 });
 
-// LISTAR PACIENTES (triagem busca quem foi cadastrado no atendimento)
+// LISTAR PACIENTES
 app.get("/pacientes", (req, res) => {
   const db = readDB();
   res.json(db.pacientes);
 });
 
-// TRIAGEM
-app.post("/triagens", (req, res) => {
+// TRIAGEM - Salvar
+app.post("/triagem", (req, res) => {
   const db = readDB();
 
   let risco = req.body.risco;
@@ -88,7 +91,7 @@ app.post("/triagens", (req, res) => {
     risco = "verde";
   }
 
-  const triagens = {
+  const triagem = {
     id: Date.now(),
     nome: req.body.nome,
     sintoma: req.body.sintoma,
@@ -100,10 +103,10 @@ app.post("/triagens", (req, res) => {
     createdAt: new Date()
   };
 
-  db.triagens.push(triagens);
+  db.triagens.push(triagem);
   writeDB(db);
 
-  res.json(triagens);
+  res.json(triagem);
 });
 
 // LISTAR TRIAGENS
@@ -112,10 +115,7 @@ app.get("/triagens", (req, res) => {
   res.json(db.triagens);
 });
 
-// ============ MÍDIA INDOOR - TV ============
-
-// Função criada para enviar a chamada do paciente para a tela da TV.
-// Serve para triagem chamar o paciente no guichê e para o médico chamar no consultório.
+// TV - CHAMADAS
 app.post("/tv/chamar", (req, res) => {
   const db = readDB();
 
@@ -135,8 +135,6 @@ app.post("/tv/chamar", (req, res) => {
   res.json(chamada);
 });
 
-// Função criada para consultar a chamada atual e o histórico que será exibido na TV.
-// Essa rota é usada para atualizar a tela automaticamente a cada poucos segundos.
 app.get("/tv/chamada", (req, res) => {
   const db = readDB();
   res.json({
@@ -145,7 +143,7 @@ app.get("/tv/chamada", (req, res) => {
   });
 });
 
-// LISTA DE MEDICAÇÕES
+// LISTA DE MEDICAÇÕES PADRÃO
 app.get("/lista-medicacoes", (req, res) => {
   res.json([
     "Dipirona",
@@ -161,8 +159,8 @@ app.get("/lista-medicacoes", (req, res) => {
   ]);
 });
 
-// CONSULTA
-app.post("/consultas", (req, res) => {
+// SALVAR CONSULTA
+app.post("/consulta", (req, res) => {
   const db = readDB();
 
   const consulta = {
@@ -171,21 +169,41 @@ app.post("/consultas", (req, res) => {
     diagnostico: req.body.diagnostico,
     medicacao: req.body.medicacao,
     obs: req.body.obs,
+    motivoAlta: req.body.motivoAlta || "Atendimento concluído",
     createdAt: new Date()
   };
 
-  db.consultas.push(consultas);
+  db.consultas.push(consulta);
   writeDB(db);
 
-  res.json(consultas);
+  res.json(consulta);
 });
 
-// MEDICAÇÕES
+// Alias caso o front chame /consultas no plural
+app.post("/consultas", (req, res) => {
+  req.url = "/consulta";
+  app.handle(req, res);
+});
+
+// LISTAR CONSULTAS/MEDICAÇÕES
 app.get("/medicacoes", (req, res) => {
   const db = readDB();
   res.json(db.consultas);
 });
 
+// ROTA DE ALTA MÉDICA
+app.post("/alta", (req, res) => {
+  const db = readDB();
+  const { paciente, motivoAlta } = req.body;
+  
+  // Remove das triagens ativas ou atualiza status se necessário
+  db.triagens = db.triagens.filter(t => t.nome !== paciente);
+  writeDB(db);
+
+  res.json({ sucesso: true, mensagem: `Alta concedida para ${paciente}` });
+});
+
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => { console.log ("Rodando na porta http://localhost:3000");
-                       });
+app.listen(PORT, () => {
+  console.log("Rodando na porta http://localhost:3000");
+});
